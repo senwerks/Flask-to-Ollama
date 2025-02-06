@@ -69,13 +69,15 @@
                 const evalTimeSec = (data.eval_duration / 1000_000_000).toFixed(2);
                 const totalTimeSec = (data.total_duration / 1000_000_000).toFixed(2);
     
+                const tokensPerSec = ((data.eval_count / data.eval_duration) * 1000_000_000).toFixed(2);
+
                 // Convert Markdown to HTML using 'marked'
                 const formattedResponse = marked.parse(data.response);
 
                 // Insert formatted response into the HTML
                 responseElement.innerHTML = `
                     <p><strong>Response:</strong> ${formattedResponse}</p>
-                    <p><small>Took ${promptTimeSec}s to evaluate the prompt, ${evalTimeSec}s to build the response, and ${totalTimeSec}s total to respond.</small></p>
+                    <p><small>Took ${promptTimeSec}s to evaluate the prompt, ${evalTimeSec}s to build the response, and ${totalTimeSec}s total to respond at ${tokensPerSec} tokens/sec.</small></p>
                 `;
     
                 // Update status to "Done!"
