@@ -3,7 +3,6 @@ import requests
 
 app = Flask(__name__)
 OLLAMA_API_URL = "http://localhost:11434"
-
 # Abundance of colourful (and redundant) print statements while I'm testing it all.
 
 def prettyprint(colour, printing):

@@ -8,6 +8,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/nano.min.css') }}" />
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],  
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]  
+            },
+            svg: { scale: 1.2 }
+        };
+    </script>
+    <script defer src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
     <div class="container">
@@ -18,14 +29,14 @@
         <section>
             <h2>Submit Prompt</h2>
             <form id="prompt-form">
-                <label for="model">Select Model:</label>
+                <label for="model">Model</label>
                 <select id="model" name="model">
                     {% for model in models %}
                         <option value="{{ model }}">{{ model }}</option>
                     {% endfor %}
                 </select>
                 <br>
-                <label for="prompt">Enter Prompt:</label>
+                <label for="prompt">Prompt</label>
                 <textarea id="prompt" name="prompt"></textarea>
                 <br>
                 <div id="status"></div>
@@ -41,6 +52,20 @@
     </div>
     
     <script>
+        // Custom Renderer to Preserve MathJax Syntax
+        const renderer = new marked.Renderer();
+
+        // Override code block rendering to prevent escaping math blocks
+        renderer.paragraph = function(text) {
+            return text.replace(/\\\[/g, '\\[') // Keep block math \[
+                        .replace(/\\\]/g, '\\]') // Keep block math \]
+                        .replace(/\\\(/g, '\\(') // Keep inline math \(
+                        .replace(/\\\)/g, '\\)'); // Keep inline math \)
+        };
+
+        // Apply custom renderer to marked
+        marked.use({ renderer });
+
         document.getElementById("prompt-form").addEventListener("submit", async function(event) {
             event.preventDefault(); // Prevent default form submission
     
@@ -64,22 +89,24 @@
     
                 const data = await response.json();
                 
-                // Extract and format timing information
-                const promptTimeSec = (data.prompt_eval_duration / 1000_000_000).toFixed(2);
-                const evalTimeSec = (data.eval_duration / 1000_000_000).toFixed(2);
-                const totalTimeSec = (data.total_duration / 1000_000_000).toFixed(2);
-    
-                const tokensPerSec = ((data.eval_count / data.eval_duration) * 1000_000_000).toFixed(2);
+                // Replace <think> with <blockquote> tags
+                const formattedResponse = data.response
+                    .replace(/<think>/g, '<h2>Thinking:</h2><blockquote>')
+                    .replace(/<\/think>/g, '</blockquote><h2>Conclusion:</h2>');
 
-                // Convert Markdown to HTML using 'marked'
-                const formattedResponse = marked.parse(data.response);
+                // Convert Markdown to HTML using 'marked' with the custom renderer
+                const htmlResponse = marked.parse(formattedResponse);
 
                 // Insert formatted response into the HTML
                 responseElement.innerHTML = `
-                    <p><strong>Response:</strong> ${formattedResponse}</p>
-                    <p><small>Took ${promptTimeSec}s to evaluate the prompt, ${evalTimeSec}s to build the response, and ${totalTimeSec}s total to respond at ${tokensPerSec} tokens/sec.</small></p>
+                    <p><strong>Response:</strong> ${htmlResponse}</p>
                 `;
-    
+
+                // Re-render MathJax after updating innerHTML
+                if (window.MathJax) {
+                    window.MathJax.typesetPromise();
+                }
+
                 // Update status to "Done!"
                 statusElement.innerHTML = "<div class=\"success\" role=\"alert\">Response received.</div>";
             } catch (error) {
