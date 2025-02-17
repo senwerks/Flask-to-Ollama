@@ -1,6 +1,6 @@
 # SageBridge, a minimal flask-based web interface for Ollama.
 
-A flask-based web-app for running locally and talking to local LLMs you have installed in Ollama. A more basic version of other web-interfaces designed for non-technical users (originally created for my kids).
+A very (very) minimal flask-based web-app for running locally and talking to LLMs you have installed in Ollama. A more basic version of other web-interfaces designed for non-technical users (originally created for my kids).
 
 Automatically gets the list of models installed in Ollama and lets you send prompts to them.
 
