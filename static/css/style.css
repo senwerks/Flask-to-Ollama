@@ -1,0 +1,9 @@
+h1 span {
+    font-size: 50%; 
+    color: var(--nano-code-kbd-background-color)
+}
+
+#response {
+    
+    padding: 10px;
+}

@@ -82,6 +82,7 @@ def check_ollama_status():
         pass
 
     prettyprint("red", "Ollama server is Offline!")
+    prettyprint("orange", "Have you got Ollama installed on this system? Is it open and running?")
     return "Offline!"
 
 if __name__ == '__main__':

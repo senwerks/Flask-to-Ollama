@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ollama Interface</title>
+    <title>SageBridge - Minimal Ollama Web Interface</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/nano.min.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
     <script>
@@ -23,11 +24,11 @@
 <body>
     <div class="container">
         <section>
-            <h1>Ollama Interface</h1>
+            <h1><kbd>SageBridge</kbd> <span>Minimal Ollama Web Interface</span></h1>
             Ollama server is currently: <mark>{{ ollama_status }}</mark>
         </section>
         <section>
-            <h2>Submit Prompt</h2>
+            <h2>Submit Your Prompt</h2>
             <form id="prompt-form">
                 <label for="model">Model</label>
                 <select id="model" name="model">
@@ -39,9 +40,10 @@
                 <label for="prompt">Prompt</label>
                 <textarea id="prompt" name="prompt"></textarea>
                 <br>
+                <button type="submit">Submit</button>
+                <br>
                 <div id="status"></div>
                 <br>
-                <button type="submit">Submit</button>
             </form>
             <div id="response"></div>
         </section>
@@ -75,7 +77,7 @@
             const responseElement = document.getElementById("response");
     
             // Show status while waiting for response
-            statusElement.innerHTML = "<div class=\"warning\" role=\"alert\">Waiting for response...</div>";
+            statusElement.innerHTML = "<progress />";
             responseElement.innerHTML = ""; // Clear previous response
     
             try {
@@ -99,7 +101,7 @@
 
                 // Insert formatted response into the HTML
                 responseElement.innerHTML = `
-                    <p><strong>Response:</strong> ${htmlResponse}</p>
+                    <article>${htmlResponse}</article>
                 `;
 
                 // Re-render MathJax after updating innerHTML
