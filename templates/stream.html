@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Streaming Response</title>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Create a new EventSource that listens to the /stream endpoint.
+      const source = new EventSource('/streamapi');
+      source.onmessage = function(event) {
+        // Append each new chunk to the content div.
+        const contentDiv = document.getElementById('content');
+        contentDiv.innerHTML += event.data;
+      };
+    });
+  </script>
+</head>
+<body>
+  <h1>Streaming Response</h1>
+  <div id="content" style="white-space: pre-wrap;"></div>
+</body>
+</html>

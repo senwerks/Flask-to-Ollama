@@ -1,133 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SageBridge - Minimal Ollama Web Interface</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SageBridge - Minimal Ollama Web Interface</title>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/nano.min.css') }}" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/nano.min.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
-    <script>
-        window.MathJax = {
-            tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']],  
-                displayMath: [['$$', '$$'], ['\\[', '\\]']]  
-            },
-            svg: { scale: 1.2 }
-        };
-    </script>
-    <script defer src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      svg: { scale: 1.2 }
+    };
+  </script>
+  <script defer src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
-    <div class="container">
-        <section>
-            <h1><kbd>SageBridge</kbd> <span>Minimal Ollama Web Interface</span></h1>
-            Ollama server is currently: <mark>{{ ollama_status }}</mark>
-        </section>
-        <section>
-            <h2>Submit Your Prompt</h2>
-            <form id="prompt-form">
-                <label for="model">Model</label>
-                <select id="model" name="model">
-                    {% for model in models %}
-                        <option value="{{ model }}">{{ model }}</option>
-                    {% endfor %}
-                </select>
-                <br>
-                <label for="prompt">Prompt</label>
-                <textarea id="prompt" name="prompt"></textarea>
-                <br>
-                <button type="submit">Submit</button>
-                <br>
-                <div id="status"></div>
-                <br>
-            </form>
-            <div id="response"></div>
-        </section>
+  <div class="container">
+    <section>
+      <h1>
+        <kbd>SageBridge</kbd> <span>Minimal Ollama Web Interface</span>
+      </h1>
+      Ollama server is currently: <mark>{{ ollama_status }}</mark>
+    </section>
+    <section>
+      <h2>Submit Your Prompt</h2>
+      <form id="prompt-form">
+        <label for="model">Model</label>
+        <select id="model" name="model">
+          {% for model in models %}
+          <option value="{{ model }}">{{ model }}</option>
+          {% endfor %}
+        </select>
+        <br />
+        <label for="prompt">Prompt</label>
+        <textarea id="prompt" name="prompt"></textarea>
+        <br />
+        <button type="submit">Submit</button>
+        <br />
+        <div id="status"></div>
+        <br />
+      </form>
+      <div id="response" style="white-space: pre-wrap;"></div>
+      <div id="total-time"></div>
+    </section>
+    <section>
+      <small></small>
+    </section>
+  </div>
 
-        <section>
-            <small></small>
-        </section>
-    </div>
-    
-    <script>
-        // Custom Renderer to Preserve MathJax Syntax
-        const renderer = new marked.Renderer();
+<script>
+  document.getElementById("prompt-form").addEventListener("submit", function (event) {
+    event.preventDefault(); // Prevent default form submission
 
-        // Override code block rendering to prevent escaping math blocks
-        renderer.paragraph = function(text) {
-            return text.replace(/\\\[/g, '\\[') // Keep block math \[
-                        .replace(/\\\]/g, '\\]') // Keep block math \]
-                        .replace(/\\\(/g, '\\(') // Keep inline math \(
-                        .replace(/\\\)/g, '\\)'); // Keep inline math \)
-        };
+    const model = document.getElementById("model").value;
+    const prompt = document.getElementById("prompt").value;
+    const statusElement = document.getElementById("status");
+    const responseElement = document.getElementById("response");
+    const totalTimeElement = document.getElementById("total-time");
 
-        // Apply custom renderer to marked
-        marked.use({ renderer });
+    // Clear previous response, total time, and show a progress indicator.
+    responseElement.innerHTML = "";
+    totalTimeElement.innerHTML = "";
+    statusElement.innerHTML = "<progress />";
 
-        document.getElementById("prompt-form").addEventListener("submit", async function(event) {
-            event.preventDefault(); // Prevent default form submission
-    
-            const model = document.getElementById("model").value;
-            const prompt = document.getElementById("prompt").value;
-            const statusElement = document.getElementById("status");
-            const responseElement = document.getElementById("response");
-    
-            // Show status while waiting for response
-            statusElement.innerHTML = "<progress />";
-            responseElement.innerHTML = ""; // Clear previous response
-    
-            try {
-                const response = await fetch("/api", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/x-www-form-urlencoded",
-                    },
-                    body: new URLSearchParams({ model, prompt })
-                });
-    
-                const data = await response.json();
+    // Use a variable to accumulate the streamed text.
+    let accumulatedResponse = "";
 
-                // Extract and format timing information
-                const promptTimeSec = (data.prompt_eval_duration / 1000_000_000).toFixed(2);
-                const evalTimeSec = (data.eval_duration / 1000_000_000).toFixed(2);
-                const totalTimeSec = (data.total_duration / 1000_000_000).toFixed(2);
+    // Build URL with query parameters for SSE.
+    const url = '/api?model=' + encodeURIComponent(model) + '&prompt=' + encodeURIComponent(prompt);
+    const source = new EventSource(url);
 
+    source.onmessage = function (event) {
+      accumulatedResponse += event.data;
+      // For live display, update as plain text so newlines are preserved.
+      responseElement.textContent = accumulatedResponse;
+    };
 
-                // Replace <think> with <blockquote> tags
-                const formattedResponse = data.response
-                    .replace(/<think>/g, '<h2>Thinking:</h2><blockquote>')
-                    .replace(/<\/think>/g, '</blockquote><h2>Conclusion:</h2>');
+    // Listen for the custom "end" event.
+    source.addEventListener("end", function (event) {
+      let totalTime = event.data;
+      if (totalTime) {
+        totalTimeElement.innerHTML = "<div class='info' role='alert'>Total time: " + totalTime + " seconds.</div>";
+      }
+      statusElement.innerHTML = "<div class='success' role='alert'>Response complete.</div>";
+      source.close();
 
-                // Convert Markdown to HTML using 'marked' with the custom renderer
-                const htmlResponse = marked.parse(formattedResponse);
+      // Work with the accumulated text.
+      let rawResponse = accumulatedResponse;
 
-                // Insert formatted response into the HTML
-                responseElement.innerHTML = `
-                    <article>
-                        <header>Response</header>
-                        ${htmlResponse}
-                        <footer>
-                            <small>Took ${promptTimeSec}s to evaluate the prompt, ${evalTimeSec}s to build the response, and ${totalTimeSec}s total to respond.</small>
-                        </footer>
-                    </article>
-                `;
+      // Replace <think> tags with temporary markers.
+      rawResponse = rawResponse.replace(/<think>/g, '---think---')
+                               .replace(/<\/think>/g, '===think===');
 
-                // Re-render MathJax after updating innerHTML
-                if (window.MathJax) {
-                    window.MathJax.typesetPromise();
-                }
+      // Configure marked to preserve single line breaks.
+      marked.setOptions({ breaks: true, gfm: true, headerIds: false });
 
-                // Update status to "Done!"
-                statusElement.innerHTML = "<div class=\"success\" role=\"alert\">Response received.</div>";
-            } catch (error) {
-                statusElement.innerHTML = "<div class=\"danger\" role=\"alert\">Error fetching response!</div>";
-            }
-        });
-    </script>
-    
+      // Convert the markdown to HTML.
+      let htmlContent = marked.parse(rawResponse);
+
+      // Restore blockquote tags from our temporary markers.
+      htmlContent = htmlContent.replace(/---think---/g, '<blockquote>')
+                               .replace(/===think===/g, '</blockquote>');
+
+      // Update the response with the final HTML.
+      responseElement.innerHTML = htmlContent;
+
+      if (window.MathJax) {
+        window.MathJax.typesetPromise();
+      }
+    });
+
+    source.onerror = function (event) {
+      statusElement.innerHTML = "<div class='danger' role='alert'>Error or connection closed unexpectedly.</div>";
+      source.close();
+    };
+  });
+</script>
+
+  
+  
+  
 </body>
 </html>
