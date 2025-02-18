@@ -10,4 +10,5 @@ Project dependencies setup for `uv`, so run with `uv run app.py`, or if you pref
 
 ## TODO
 
-- Fix the formatting of the responses, eg math responses are still broken due to markdown formatting clashing with mathjax formatting.
+- Fix the formatting of responses with math in them, eg math responses are still broken due to markdown formatting clashing with mathjax formatting.
+- Do some better LLM-specific formatting. If the model replies with <think> tags (and there's actually content between the tags) then format the <think> part differently to the final response. Make it modular so we can add other formatting for other special parts of responses.

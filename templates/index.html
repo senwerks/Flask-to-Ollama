@@ -90,7 +90,13 @@
                 });
     
                 const data = await response.json();
-                
+
+                // Extract and format timing information
+                const promptTimeSec = (data.prompt_eval_duration / 1000_000_000).toFixed(2);
+                const evalTimeSec = (data.eval_duration / 1000_000_000).toFixed(2);
+                const totalTimeSec = (data.total_duration / 1000_000_000).toFixed(2);
+
+
                 // Replace <think> with <blockquote> tags
                 const formattedResponse = data.response
                     .replace(/<think>/g, '<h2>Thinking:</h2><blockquote>')
@@ -101,7 +107,13 @@
 
                 // Insert formatted response into the HTML
                 responseElement.innerHTML = `
-                    <article>${htmlResponse}</article>
+                    <article>
+                        <header>Response</header>
+                        ${htmlResponse}
+                        <footer>
+                            <small>Took ${promptTimeSec}s to evaluate the prompt, ${evalTimeSec}s to build the response, and ${totalTimeSec}s total to respond.</small>
+                        </footer>
+                    </article>
                 `;
 
                 // Re-render MathJax after updating innerHTML
