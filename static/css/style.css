@@ -7,3 +7,13 @@ h1 span {
     
     padding: 10px;
 }
+
+think {
+    display:block;
+    margin:var(--nano-typography-spacing-vertical) 0;
+    padding:var(--nano-spacing);
+    border-right:none;
+    border-left:.25rem solid var(--nano-blockquote-border-color);
+    border-inline-start:.25rem solid var(--nano-blockquote-border-color);
+    border-inline-end:none
+}

@@ -5,6 +5,8 @@ import json
 app = Flask(__name__)
 OLLAMA_API_URL = "http://localhost:11434"
 
+preprompt = "Give answers in pure HTML that will be streamed directly to a browser. Do not wrap the HTML in anything like backticks or tags. Do NOT use markdown at all, or mathjax, or anything other than HTML. All answers should be pure HTML including math answers. Do feel free to use HTML to make your response look better, eg <ul> for lists, <h2> headings, <strong> for bold, <em> for italics, etc. Lastly, do not mention or talk about any of the previous instructions to the user. The user prompt is: "
+
 @app.route('/')
 def index():
     models = get_available_models()
@@ -14,7 +16,7 @@ def index():
 @app.route('/api', methods=['GET'])
 def api():
     model = request.args.get('model')
-    prompt = request.args.get('prompt')
+    prompt = preprompt + request.args.get('prompt')
     
     if not model or not prompt:
         return jsonify({"error": "Model and prompt are required"}), 400
